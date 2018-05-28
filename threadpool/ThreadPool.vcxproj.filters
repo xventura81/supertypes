@@ -7,29 +7,29 @@
     </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Header Files\types">
-      <UniqueIdentifier>{1bb3e6fa-4ed0-403b-b62b-1ced06a701d4}</UniqueIdentifier>
+      <UniqueIdentifier>{e24f823f-05ad-415a-a3cd-067d0195daaa}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\helpers">
-      <UniqueIdentifier>{71fe7758-c3cb-499a-b4bd-16e5ad8f1dee}</UniqueIdentifier>
+      <UniqueIdentifier>{15fae4ad-5e3f-4768-936a-86e09ee21f62}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="st_string.h">
+    <ClInclude Include="st_threadpool.h">
       <Filter>Header Files\types</Filter>
     </ClInclude>
-    <ClInclude Include="st_decimal.h">
-      <Filter>Header Files\types</Filter>
+    <ClInclude Include="details.h">
+      <Filter>Header Files\helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="st_string.cpp">
+    <ClCompile Include="st_threadpool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
