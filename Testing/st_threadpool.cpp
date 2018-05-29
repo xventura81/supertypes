@@ -30,7 +30,7 @@ namespace zgTesting
 			st::threadpool threadPool;
 			cancel_t token;
 			bool bWasRun = false;
-			auto func = [&bWasRun](const cancel_t& token) {
+			auto func = [&bWasRun](cancel_t token) {
 				bWasRun = true;
 				return true;
 			};
