@@ -5,9 +5,9 @@ VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "supertypes", "supertypes\supertypes.vcxproj", "{5DC46047-3829-466B-AE7F-CCE421398640}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "threadpool", "C:\Users\Matthias\ExtSD\Projects\supertypes\threadpool\ThreadPool.vcxproj", "{F5505196-83D0-4B97-8999-C986E2529052}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "threadpool", "threadpool\ThreadPool.vcxproj", "{F5505196-83D0-4B97-8999-C986E2529052}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Testing", "C:\Users\Matthias\ExtSD\Projects\supertypes\Testing\Testing.vcxproj", "{CAF9B6A4-A1BF-4B19-BAFF-36C6767B2151}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Testing", "Testing\Testing.vcxproj", "{CAF9B6A4-A1BF-4B19-BAFF-36C6767B2151}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

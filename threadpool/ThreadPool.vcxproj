@@ -121,6 +121,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="details.h" />
+    <ClInclude Include="st_future.h" />
     <ClInclude Include="st_threadpool.h" />
   </ItemGroup>
   <ItemGroup>

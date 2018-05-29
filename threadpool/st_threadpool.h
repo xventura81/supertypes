@@ -64,6 +64,26 @@ namespace st
 			} catch( _details::thread_terminate&){}
 		}
 
+		template <typename T>
+		generic_future<T> runFunc(std::function<T()> func)
+		{
+			auto prm = _details::generic_promise::create<T>();
+			auto ft = prm.get_future<T>();
+			auto fnThread = [&prm, func] {	// !Invalid capture-by-ref!
+				try
+				{
+					prm.set_value<T>(func());
+				}
+				catch (std::exception&)
+				{
+					prm.set_exception(std::current_exception());
+				}
+			};
+			m_wakeup.quFunc.push(std::move(fnThread));
+			m_wakeup.cond.notify_one();	// What if all are busy?
+			return ft;
+		}
+
 	public:
 
 		explicit threadpool(size_t nThreads = 20U) :
@@ -83,43 +103,43 @@ namespace st
 				th.join();
 		}
 
-		size_t size_running() const {
+		size_t size_running() const
+		{
 			return std::count_if(m_vecThreads.cbegin(), m_vecThreads.cend(),
 				[](const std::thread& th) {return th.joinable(); });
 		}
 
 
 		template <typename T>
-		std::future<T> run_async(std::function<T(const cancellation_token&)> func, const cancellation_token& token) 
+		generic_future<T> run_async(std::function<T(const cancellation_token&)> func, const cancellation_token& token) 
 		{
-			std::promise<T> pr;
-			auto fut = pr.get_future();
+			generic_future<T> fut;
 			try {
 				token.throwIfCancelled();
-				//...
+				fut = runFunc<T>([&token, func]{ return func(token); });	// !Invalid capture-by-ref!
 				token.throwIfCancelled();
 			}
 			catch (_details::cancelled_exception&)
 			{
-				pr.set_exception(std::current_exception());
+				fut.set_exception(std::current_exception());
 			}
 			return fut;
 		}
 
 
 		template <typename T>
-		std::future<T> run_async(std::function<T()> func)
+		generic_future<T> run_async(std::function<T()> func)
 		{
 			cancellation_token token;
-			auto fnC = [func](const cancellation_token& ct)
+			auto fnC = [func](const cancellation_token& ct) -> T
 			{
 				T res;
-				if (!ct.isCancelled)
+				if (!ct.isCancelled())
 					res = func();
 				ct.throwIfCancelled();
 				return res;
 			};
-			return runAsync(fnC, token);
+			return run_async<T>(fnC, token);
 		}
 
 

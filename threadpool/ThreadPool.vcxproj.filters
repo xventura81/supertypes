@@ -27,6 +27,9 @@
     <ClInclude Include="details.h">
       <Filter>Header Files\helpers</Filter>
     </ClInclude>
+    <ClInclude Include="st_future.h">
+      <Filter>Header Files\types</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="st_threadpool.cpp">
