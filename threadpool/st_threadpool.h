@@ -20,10 +20,10 @@ namespace st
 		cancellation_token(const cancellation_token&) = default;
 		cancellation_token& operator=(const cancellation_token&) = default;
 		void cancel() { *m_pbCancelled = true; }
-		bool isCancelled() const { return *m_pbCancelled; }
-		void throwIfCancelled() const
+		bool cancelled() const { return *m_pbCancelled; }
+		void throw_if_cancelled() const
 		{
-			if (isCancelled())
+			if (cancelled())
 				throw _details::cancelled_exception{};
 		}
 	};
@@ -52,8 +52,8 @@ namespace st
 			try {
 				while (true) {
 					std::function<void()> doWork;
-					std::unique_lock<std::mutex> lk(m_wakeup.mutex);
 					{
+						std::unique_lock<std::mutex> lk(m_wakeup.mutex);
 						m_wakeup.cond.wait(lk, fnCheck);
 						doWork = std::move(m_wakeup.quFunc.front());
 						m_wakeup.quFunc.pop();
@@ -93,40 +93,42 @@ namespace st
 		}
 
 		template <typename F>
-		using result_t = std::result_of_t<F()>;
+		using res_t = std::result_of_t<F()>;
 
 		template <typename F>
-		std::future<result_t<F>> run_async(F&& func, cancellation_token token)
+		using resC_t = std::result_of_t<F(cancellation_token)>;
+
+		template <typename F>
+		std::shared_future<resC_t<F>> run_async(F&& func, cancellation_token token)
 		{
 			try {
-				token.throwIfCancelled();
-				auto pTask = std::make_shared<std::packaged_task<result_t<F>()>>(
-					std::bind(std::forward<F>(func), token);
-				);
-				auto fut = pTask->get_future();
+				token.throw_if_cancelled();
+				auto fut = std::async(std::launch::deferred, [fn = std::forward<F>(func), token] {return fn(token); });
+				auto share_ft = fut.share();
 				{
 					std::unique_lock<std::mutex> lk(m_wakeup.mutex);
-					m_wakeup.quFunc.emplace([pTask] {(*pTask)(); });
+					m_wakeup.quFunc.emplace([share_ft] { share_ft.wait(); });
 				}
 				m_wakeup.cond.notify_one();	// What if all are busy?
-				return fut;
+				return share_ft;
 			}
 			catch (_details::cancelled_exception&)
 			{
-				std::promise<result_t<F>> prm;
+				std::promise<resC_t<F>> prm;
 				auto fut = prm.get_future();
 				prm.set_exception(std::current_exception());
-				return fut;
+				return fut.share();
 			}
 		}
 
 		template <typename F>
-		std::future<result_t<F>> run_async(F&& func)
+		std::shared_future<res_t<F>> run_async(F&& func)
 		{
 			cancellation_token token;
-			return run_async<F>([fn{std::forward<F>(func)}](cancellation_token ct) {
+			auto fnC = [fn = std::forward<F>(func)](cancellation_token ) {
 				return fn();
-			}, token);
+			};
+			return run_async<decltype(fnC)>(std::move(fnC), token);
 		}
 
 
