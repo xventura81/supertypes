@@ -101,5 +101,53 @@ namespace zgTesting
 			Assert::ExpectException<st::_details::cancelled_exception>([&fut] {return fut.get(); });
 		}
 
+		TEST_METHOD(AcceptsMoreTasksThanThreads)
+		{
+			st::threadpool threadPool(1U);
+			std::promise<void> evGo;
+			auto ftGo = evGo.get_future().share();
+			std::vector<std::pair<std::promise<void>, int>> vecRunState;
+			std::vector<std::shared_future<bool>> vecftRes;
+			for (auto k = 0U; k < 10U; ++k)
+			{
+				vecRunState.push_back(std::make_pair(std::promise<void>{}, 0));
+				auto itState = vecRunState.rbegin();
+				auto ft = itState->first.get_future();
+				auto&& bRun = itState->second;
+				vecftRes.push_back(
+					threadPool.run_async([ftGo = std::move(ft), &bRun]{
+						ftGo.wait();
+						bRun = true;
+						return bRun == 1;
+					})
+				);
+			}
+
+			auto itStart = vecRunState.begin();
+			itStart->first.set_value();
+			Assert::IsTrue(vecftRes.front().get());	
+			++itStart;
+			Assert::IsFalse(std::any_of(itStart, vecRunState.end(),
+				[](const auto& state) {return state.second == 1; }));
+			
+			for (; itStart != vecRunState.end(); ++itStart)
+				itStart->first.set_value();
+			std::this_thread::sleep_for(200ms);
+			Assert::IsTrue(std::all_of(vecftRes.begin(), vecftRes.end(), [](auto& ftRes) {return ftRes.get(); }));
+		}
+
+		TEST_METHOD(RunsToEndBeforeCleanup)
+		{
+			bool bHasRun = false;
+			{
+				st::threadpool threadPool;
+				threadPool.run_async([&bHasRun] {
+					std::this_thread::sleep_for(500ms);
+					bHasRun = true;
+				});
+			}
+			Assert::IsTrue(bHasRun);
+		}
+
 	};
 }
