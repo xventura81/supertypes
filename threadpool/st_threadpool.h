@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <queue>
-#include <functional>
 #include <mutex>
 #include <future>
 
@@ -29,7 +28,6 @@ namespace st
 		}
 	};
 
-
 	class threadpool final
 	{
 
@@ -46,24 +44,6 @@ namespace st
 
 		std::vector<std::thread> m_vecThreads;
 		threadNotify m_wakeup;
-
-		template <typename T>
-		static std::function<void()> wrap(std::function<T(cancellation_token)> func, std::promise<T>&& prm, cancellation_token token)
-		{
-			return [prom(std::move(prm)), func, token]() -> void
-			{
-				try
-				{
-					auto&& t = func(token);
-					prom.set_value(std::move(t));
-				}
-				catch (std::exception&)
-				{
-					prom.set_exception(std::current_exception());
-				}
-			};
-		}
-
 
 		void workFunc()
 		{
@@ -96,8 +76,11 @@ namespace st
 
 		~threadpool()
 		{
-			for (auto&& th : m_vecThreads)
-				m_wakeup.quFunc.push([] {throw _details::thread_terminate(); });
+			{
+				std::unique_lock<std::mutex> lk(m_wakeup.mutex);
+				for (auto&& th : m_vecThreads)
+					m_wakeup.quFunc.push([] {throw _details::thread_terminate(); });
+			}
 			m_wakeup.cond.notify_all();
 			for (auto&& th : m_vecThreads)
 				th.join();
@@ -109,39 +92,41 @@ namespace st
 				[](const std::thread& th) {return th.joinable(); });
 		}
 
+		template <typename F>
+		using result_t = std::result_of_t<F()>;
 
-		template <typename T>
-		std::future<T> run_async(std::function<T(cancellation_token)> func, cancellation_token token) 
+		template <typename F>
+		std::future<result_t<F>> run_async(F&& func, cancellation_token token)
 		{
-			std::promise<T> prm;
-			auto fut = prm.get_future();
 			try {
 				token.throwIfCancelled();
-				auto&& fnRun = wrap<T>(func, std::move(prm), token);
-				m_wakeup.quFunc.push(std::move(fnRun));
+				auto pTask = std::make_shared<std::packaged_task<result_t<F>()>>(
+					std::bind(std::forward<F>(func), token);
+				);
+				auto fut = pTask->get_future();
+				{
+					std::unique_lock<std::mutex> lk(m_wakeup.mutex);
+					m_wakeup.quFunc.emplace([pTask] {(*pTask)(); });
+				}
 				m_wakeup.cond.notify_one();	// What if all are busy?
+				return fut;
 			}
 			catch (_details::cancelled_exception&)
 			{
+				std::promise<result_t<F>> prm;
+				auto fut = prm.get_future();
 				prm.set_exception(std::current_exception());
+				return fut;
 			}
-			return fut;
 		}
 
-
-		template <typename T>
-		std::future<T> run_async(std::function<T()> func)
+		template <typename F>
+		std::future<result_t<F>> run_async(F&& func)
 		{
 			cancellation_token token;
-			auto fnC = [func](cancellation_token ct)
-			{
-				T res;
-				if (!ct.isCancelled())
-					res = func();
-				ct.throwIfCancelled();
-				return res;
-			};
-			return run_async<T>(fnC, token);
+			return run_async<F>([fn{std::forward<F>(func)}](cancellation_token ct) {
+				return fn();
+			}, token);
 		}
 
 
